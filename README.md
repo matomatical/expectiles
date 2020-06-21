@@ -3,23 +3,24 @@
 *Expectiles* are a class of summary statistics generalising the
 expected value [1, 2].
 They have been relatively neglected since their introduction [3].
-
 Perhaps this is because they lacked a simple calculation procedure
 and an immediate interpretation like that of the expected value or
 that of quantiles.
+
+See [`derivation.pdf`](derivation/derivation.pdf) for a review of
+expectile statistics and some thoughts on their interpretation.
 
 ## Computing expectiles
 
 This repopsitory provides an efficient implementation for computing
 the expectiles of a sample without resorting to generic iterative
-optimisation techniques. See the `expectile` function in module
-`expectile.py`, and the notebook `ComputingExpectiles.ipynb` for 
-a brief walkthough. A full derivation to come...
+optimisation techniques.
 
-## Interpreting expectiles
-
-Viewing expectiles as 'expectations at varying degrees of positive
-outlook' may provide some interpretability. More to come...
+See the `expectile` function in module [`expectile.py`](expectile.py),
+the notebook [`ComputingExpectiles.ipynb`](ComputingExpectiles.ipynb)
+for a brief walkthough of the method,
+and
+[`derivation.pdf`](derivation/derivation.pdf) for a full derivation.
 
 ---
 

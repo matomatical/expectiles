@@ -1,0 +1,239 @@
+\documentclass{article}
+
+\usepackage{amsmath}        % additional symbols
+\usepackage{mathtools}
+\usepackage{amssymb}
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclarePairedDelimiter{\iv}{[\hspace{-1.5pt}[}{]\hspace{-1.5pt}]}
+\newcommand{\expt}[2]{\epsilon_{#1}{(#2)}}
+\newcommand{\hatexpt}[2]{\hat\epsilon_{#1}{(#2)}}
+\newcommand{\plusgets}{\stackrel{+}{\gets}}
+
+\title{Efficiently computing sample expectiles}
+
+\begin{document}
+
+\maketitle
+
+\section{Expectile statistics}
+
+It is well known that the expected value $\mu_X$ of a random variable $X$
+with finite second moment minimises the expected squared distance from the
+random variable. That is,
+\begin{equation}
+    \mu_X = \argmin_\mu
+    \mathbb{E}\left[
+        (X-\mu)^2\right
+    ].
+\end{equation}
+
+\emph{Expectiles} are a class of summary statistics generalising the
+expected value \cite{aigner1976estimation, newey1987asymmetric}.
+Given an asymmetry parameter $\tau \in (0, 1)$,
+the $\tau$-expectile, $\expt{X}{\tau}$ of $X$ is the minimiser of
+an \emph{asymmetric} version of this expected squared distance, weighting
+squared positive distances by $\tau$ and squared negative distances by
+$1-\tau$, as in (\ref{eq:laws})\footnotemark.
+\footnotetext{
+Here, $\iv{P}^a_b$ denotes a \emph{generalised Iverson bracket},
+evaluating to $a$ if $P$ is a true proposition, or to $b$ otherwise.
+}
+\begin{equation}
+    \label{eq:laws}
+    \expt{X}{\tau} = \argmin_\epsilon
+    \mathbb{E}\left[
+        \iv{X > \epsilon}^{\tau}_{1-\tau}(X-\epsilon)^2
+    \right]
+\end{equation}
+The expected value $\mu_X$ is recovered as the $0.5$-expectile.
+Expectiles with $\tau > 0.5$ are more sensitive to `higher-than-expected'
+outcomes than they are to `lower-than-expected' outcomes. In this sense,
+they can be viewed as `optimistic' expectation values.
+Likewise, expectiles with $\tau < 0.5$ can be viewed as `pessimistic'
+expectations.
+We can thus
+understand $\tau$ as capturing the degree of `positive outlook' of an
+expectile, on a scale from 0 to 1.
+% * Should we mention that this makes sense only as long as the random
+%   variable is something for which we want it to be higher?
+%   E.g. optimistic about 'return' versus optimistic about 'risk'?
+% * Should we note that it makes sense to define the tau=0, 1 cases as the
+%   minimum or maximum, respectively? It does for a sample, anyway. If not,
+%   maybe we have to talk about infimums and supremums.
+% * On that note, should we distinguish between sample expectiles and 
+%   expectiles of an underlying distribution?
+
+Expectiles have been relatively neglected as summary statistics since their introduction \cite{waltrup2015expectile}. Perhaps this is because expectiles lacked a simple calculation procedure for samples, and an immediate interpretation, like those of the expected value or those of quantiles.
+Viewing expectiles as `expectations at varying degrees of positive outlook'  may provide some interpretability.
+We outline an efficient method for computing sample expectiles in the next section.
+
+Quantiles and expectiles are closely related.
+Quantiles minimise an asymmetric \emph{absolute} distance and thus expectiles generalise the expected value in analogy to how quantiles generalise the \emph{median} value of a random variable. 
+Expectiles possess many properties similar to quantiles.
+Indeed, \cite{jones1994expectiles} showed that the expectiles of a random variable $X$ \emph{are} the quantiles of a suitably transformed $X$.
+
+Furthermore, expectiles may be preferred over quantiles in several contexts.
+In regression (i.e. in estimating the distribution of a dependent variable conditional on some independent variable), asymmetric least squares regression (fitting expectile curves) may be preferable to asymmetric absolute value regression (fitting quantile curves) \cite{kneib2013beyond}. 
+Based on a correspondence between quantiles and expectiles, \cite{efron1991regression} suggests an efficient method for estimating quantiles from estimated expectiles, rather than directly from data.
+This same idea underlies a technique using a distribution's expectiles to compute the \emph{value at risk} and the \emph{conditional value at risk} (a.k.a. \emph{expected shortfall}) \cite{taylor2008estimating}, establishing expectiles as a sensible learning target for risk-sensitive reinforcement learning, for example \cite{morimura2012parametric}.
+
+
+\section{Algorithm for sample expectiles}
+
+To our knowledge, an efficient method of computing the expectiles of a
+sample is not available within standard software libraries.  Here we derive
+a method for computing the expectiles of a sample without resorting to
+iterative optimisation, based on the observation that the sample expectile
+optimisation target has a piece-wise-linear continuous gradient for which
+the root may be easily computed.
+
+Given a sample $\vec x = x_1, \ldots, x_N$
+and an asymmetry parameter $\tau \in (0, 1)$,
+define the \emph{$\tau$-sample-expectile} $\expt{\vec x}{\tau}$:
+\begin{equation}
+    \label{eq:sample-expectiles}
+    \expt{\vec x}{\tau}
+    =
+    \argmin_\epsilon
+    \frac{1}{N}
+    \sum_{i=0}^{N}
+        \iv{x_i > \epsilon}^{\tau}_{1-\tau}
+        (x_i-\epsilon)^2.
+\end{equation}
+
+Differentiating the optimisation target of (\ref{eq:sample-expectiles})
+with respect to $\epsilon$
+yields a necessary condition for $\epsilon = \expt{\vec x}{\tau}$:
+\begin{align}
+    \notag
+    0
+    &=
+    \frac{-2}{N}
+    \sum_{i=0}^{N}
+        \iv{x_i > \epsilon}^{\tau}_{1-\tau}
+        (x_i-\epsilon)
+    \qquad\text{or, equivalently,}
+    \\
+    \label{eq:sample-gradient-condition}
+    0&=
+    (1-\tau)
+    \smashoperator{\sum_{i : x_i \leq \epsilon}}
+        \frac1N
+        (x_i-\epsilon)
+    +\tau
+    \smashoperator{\sum_{i : x_i > \epsilon}}
+        \frac1N
+        (x_i-\epsilon).
+\end{align}
+
+Define the
+\emph{sample cumulative distribution function}
+$F_{\vec x}(\epsilon)$
+and the \emph{sample partial moment function}
+$M_{\vec x}(\epsilon)$,
+and note their `complement' identities:
+\begin{align}
+\label{eq:sample-cdf-compl}
+F_{\vec x}(\epsilon)
+& =
+{\sum_{i:x_i\leq \epsilon}} \frac{1}{N}
+&
+& =
+1 - {\sum_{i:x_i > \epsilon}} \frac{1}{N}
+\\
+\label{eq:sample-pmf-compl}
+M_{\vec x}(\epsilon)
+& =
+{\sum_{i:x_i\leq \epsilon}} \frac{1}{N} x_i
+&
+& =
+\mu_{\vec x} - {\sum_{i:x_i > \epsilon}} \frac{1}{N} x_i
+\end{align}
+$
+\mu_{\vec x}
+= \sum_{i=0}^N \frac{1}{N} x_i
+= M_{\vec x}(\max_i x_i)
+$
+is the sample mean.
+
+With these functions, restate the right-hand side of
+(\ref{eq:sample-gradient-condition})
+as a function, $G_{\vec x}(\epsilon)$
+as in (\ref{eq:sample-gradient-linear}),
+for which we seek a root.
+\begin{equation}
+\label{eq:sample-gradient-linear}
+G_{\vec x}(\epsilon) = 
+- ((1-\tau) F_{\vec x}(\epsilon) + \tau(1-F_{\vec x}(\epsilon)))
+\cdot \epsilon
++ (1-\tau) M_{\vec x}(\epsilon)
++ \tau (\mu_{\vec x} - M_{\vec x}(\epsilon)) 
+\end{equation}
+
+Note that $F_{\vec x}(\epsilon)$ and $M_{\vec x}(\epsilon)$ are piece-wise constant (with a discontinuity at each $x_i$).
+Therefore, $G_{\vec x}(\epsilon)$ is piece-wise linear.
+Each piece has a negative slope.
+Moreover, $G_{\vec x}(\epsilon)$ is continuous\footnotemark.
+\footnotetext{
+    This is despite discontinuities in $F_{\vec x}(\epsilon)$ and $M_{\vec x}(\epsilon)$.
+    One may verify that
+    $\lim_{\epsilon \uparrow x_i}G_{\vec x}(\epsilon) = G_{\vec x}(x_i)$
+    for $i=2,\ldots,N$
+    because
+    $
+    x_i F_{\vec x}(x_i) - x_i F_{\vec x}(x_{i-1})
+    = x_i/N
+    = M_{\vec x}(x_i) - M_{\vec x}(x_{i-1})
+    $.
+    We omit a full proof.}
+This leads to the following efficient algorithm for finding the root of $G_{\vec x}(\epsilon)$ and thus computing the $\tau$-sample-expectile of $\vec x$:
+\begin{enumerate}
+\item 
+    Sort $\vec x$. (Below, assume that $x_1 \leq \ldots \leq x_N$.)
+% \item
+    % If $\tau=0$, return $x_1$. If $\tau=1$, return $x_N$.
+\item
+    Compute $F_{\vec x}(x_i)$ and $M_{\vec x}(x_i)$ for $i = 1, \ldots, N$.
+    Since $\vec x$ is sorted, these take particularly simple forms:
+    $$
+    F_i \gets F_{\vec x}(x_i) = \frac{i}{N},
+    \quad
+    M_i \gets M_{\vec x}(x_i) = \sum_{j=1}^{i}\frac{x_j}{N}.
+    $$
+    
+    Note that $M_N = \mu_{\vec x}$ and $F_N = 1$.
+\item
+    Compute $G_{\vec x}(x_i)$ for $i = 1, \ldots, N$:
+    $$
+    G_i
+    \gets
+    -((1-\tau) F_i + \tau(F_N - F_i)) \cdot x_i
+    + (1-\tau) M_i + \tau(M_N - M_i).
+    $$
+\item
+    The $i$\textsuperscript{th} segment of $G_{\vec x}(\epsilon)$
+    runs from $(x_i, G_i)$ down to $(x_{i+1}, G_{i+1})$.
+    Find the $i$ with
+    $G_i \geq 0 > G_{i+1}$
+    and compute this segment's root:
+    $$
+    % x_i - G_i \frac{x_{i+1} - x_i}{G_{i+1} - G_i}
+    \frac
+        {(1-\tau) M_i + \tau(M_N - M_i)}
+        {(1-\tau) F_i + \tau(F_N - F_i)}
+    .
+    $$
+    This is both $G_{\vec x}(\epsilon)$'s root and the $\tau$-sample-expectile.
+\end{enumerate}
+Finally, note that omitting the $\frac{1}{N}$ factor in the computation of $F_i$ and $M_i$ may assist with numerical stability.
+% TODO: is that true?
+
+% TODO: Does this method also lead to an efficient and exact method for
+% *imputing* a set of expectiles? 
+
+
+\bibliographystyle{unsrt}  
+\bibliography{References}
+
+\end{document}
