@@ -16,7 +16,7 @@ This repopsitory provides an efficient implementation for computing
 the expectiles of a sample without resorting to generic iterative
 optimisation techniques.
 
-See the `expectile` function in module [`expectile.py`](expectile.py),
+See the `expectile` function in module [`expectiles.py`](expectiles.py),
 the notebook [`ComputingExpectiles.ipynb`](ComputingExpectiles.ipynb)
 for a brief walkthough of the method,
 and
