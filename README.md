@@ -10,6 +10,12 @@ that of quantiles.
 See [`derivation.pdf`](derivation/derivation.pdf) for a review of
 expectile statistics and some thoughts on their interpretation.
 
+Note: If you are interested in expectile-based distributional
+reinforcement learning, see
+[issue #1](https://github.com/matomatical/expectiles/issues/1)
+and
+[this other repo](https://github.com/matomatical/tabular-distRL).
+
 ## Computing expectiles
 
 This repopsitory provides an efficient implementation for computing
